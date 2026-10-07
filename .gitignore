@@ -1,0 +1,26 @@
+# IDE / языковые серверы
+.vscode/
+.idea/
+.metals/
+.bloop/
+.bsp/
+metals.sbt
+
+# sbt / JVM
+target/
+*.class
+*.jar
+
+# Scala / Haskell build artifacts
+*.hi
+*.o
+*.exe
+dist-newstyle/
+.ghc.environment.*
+
+# прочее
+.DS_Store
+
+# папки задач живут в своих ветках (добавлять новые сюда)
+1_task_1_scala/
+1_task_2_haskell/
