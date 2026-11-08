@@ -6,7 +6,5 @@ lazy val root = project
     name := "1_task_1_scala",
     version := "0.1.0-SNAPSHOT",
 
-    scalaVersion := scala3Version,
-
-    libraryDependencies += "org.scalameta" %% "munit" % "1.3.6" % Test
+    scalaVersion := scala3Version
   )

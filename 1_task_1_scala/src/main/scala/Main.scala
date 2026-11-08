@@ -1,13 +1,10 @@
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.concurrent.duration._
-import java.util.concurrent.{ExecutorService, Executors}
+import java.util.concurrent.{Callable, Executors}
 
 object ParallelFactorization {
 
-  val pool: ExecutorService = Executors.newFixedThreadPool(4)
-  implicit val ec: ExecutionContext = ExecutionContext.fromExecutorService(pool)
-  
-  // Факторизация числа: возвращает список (простое, степень)
+  val MaxNumber: Long = 1_000_000_000_000L
+
+  // Возвращает список пар (простой множитель, степень).
   def factorize(n: Long): List[(Long, Int)] = {
     def loop(x: Long, d: Long, acc: List[(Long, Int)]): List[(Long, Int)] = {
       if (d * d > x) {
@@ -27,34 +24,50 @@ object ParallelFactorization {
     if (n < 2) Nil else loop(n, 2, Nil)
   }
   
-  def main(args: Array[String]): Unit = {
+  def generateNumbers(count: Int): List[Long] = {
     val random = new scala.util.Random(42)
-    val numbers = List.fill(1000)(2L + random.nextLong(10000000000000000L))
-    
-    // Последовательная версия
-    println("=== Последовательная версия ===")
-    val seqStart = System.currentTimeMillis()
+    List.fill(count)(2L + random.nextLong(MaxNumber - 1L))
+  }
+
+  def factorizeParallel(numbers: List[Long]): List[(Long, List[(Long, Int)])] = {
+    val pool = Executors.newFixedThreadPool(4)
+    try {
+      val futures = numbers.map { n =>
+        pool.submit(new Callable[(Long, List[(Long, Int)])] {
+          override def call(): (Long, List[(Long, Int)]) = (n, factorize(n))
+        })
+      }
+      // Сначала отправляем все задачи, затем собираем результаты по порядку.
+      futures.map(_.get())
+    } finally {
+      pool.shutdown()
+    }
+  }
+
+  def main(args: Array[String]): Unit = {
+    val numbers = generateNumbers(1000)
+
+    val seqStart = System.nanoTime()
     val seqResults = numbers.map(n => (n, factorize(n)))
-    val seqTime = System.currentTimeMillis() - seqStart
-    
-    seqResults.take(5).foreach { case (n, factors) =>
+    val seqTime = System.nanoTime() - seqStart
+
+    val parStart = System.nanoTime()
+    val parResults = factorizeParallel(numbers)
+    val parTime = System.nanoTime() - parStart
+
+    require(seqResults == parResults, "Sequential and parallel results differ")
+
+    println("=== Sequential examples ===")
+    seqResults.take(2).foreach { case (n, factors) =>
       println(s"$n = ${factors.map { case (p, e) => if (e > 1) s"$p^$e" else s"$p" }.mkString(" * ")}")
     }
-    println(s"Время: $seqTime ms")
-    
-    // Параллельная версия
-    println("\n=== Параллельная версия (4 потока) ===")
-    val parStart = System.currentTimeMillis()
-    val futures = numbers.map(n => Future { (n, factorize(n)) })
-    val parResults = Await.result(Future.sequence(futures), 60.seconds)
-    val parTime = System.currentTimeMillis() - parStart
-    
-    parResults.take(5).foreach { case (n, factors) =>
+    println("=== Parallel examples (4 threads) ===")
+    parResults.take(2).foreach { case (n, factors) =>
       println(s"$n = ${factors.map { case (p, e) => if (e > 1) s"$p^$e" else s"$p" }.mkString(" * ")}")
     }
-    println(s"Время: $parTime ms")
-    println(s"Ускорение: ${"%.2f".format(seqTime.toDouble / parTime)}x")
-    
-    pool.shutdown()
+    println(s"Results match: ${parResults.size} numbers")
+    println(f"Sequential time: ${seqTime / 1_000_000.0}%.2f ms")
+    println(f"Parallel time (4 threads): ${parTime / 1_000_000.0}%.2f ms")
+    println(f"Speedup: ${seqTime.toDouble / parTime}%.2fx")
   }
 }
