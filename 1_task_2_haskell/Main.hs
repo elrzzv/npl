@@ -4,10 +4,10 @@ import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Monad (forM, forM_, when)
 import Data.Bits (shiftR, xor)
-import Data.List (intercalate)
 import Data.Word (Word64)
 import System.CPUTime (getCPUTime)
 import Data.Time.Clock.POSIX (getPOSIXTime)
+import System.Exit (exitFailure)
 
 nAccounts :: Int
 nAccounts = 8
@@ -26,7 +26,6 @@ maxAmount :: Int
 maxAmount = 200
 
 -- Простой генератор случайных чисел (LCG + xorshift),
--- чтобы не тянуть внешние пакеты.
 nextSeed :: Word64 -> Word64
 nextSeed s = s * 6364136223846793005 + 1442695040888963407
 
@@ -45,7 +44,7 @@ initialSeed = do
   pure (nextSeed s)
 
 -- Один перевод: снимаем сумму со счёта from и кладём на to.
--- Вся операция атомарна, конкурентные транзакции сериализуются STM.
+-- Вся операция атомарна; при конфликте STM повторяет транзакцию.
 transfer :: [TVar Int] -> Int -> Int -> Int -> STM ()
 transfer accounts from to amount = do
   fromBal <- readTVar (accounts !! from)
@@ -54,7 +53,7 @@ transfer accounts from to amount = do
     toBal <- readTVar (accounts !! to)
     writeTVar (accounts !! to) (toBal + amount)
 
--- Поток: opsPerThread случайных переводов.
+-- Поток: opsPerThread попыток случайного перевода.
 worker :: MVar () -> [TVar Int] -> Word64 -> IO ()
 worker done accounts seed0 = do
   let loop _ 0 = pure ()
@@ -86,7 +85,7 @@ main = do
   putStrLn $ "Accounts (" ++ show nAccounts ++ "): " ++ show before
   putStrLn $ "Sum before: " ++ show sumBefore
 
-  -- Запускаем nThreads потоков, каждый ждёт завершения через MVar
+  -- Запускаем nThreads потоков и ждём их завершения через MVar
   done <- newEmptyMVar
   forM_ [0 .. nThreads - 1] $ \i -> forkIO $
     worker done accounts (nextSeed (seed0 + fromIntegral i * 40503 + 7))
@@ -96,10 +95,10 @@ main = do
   let sumAfter = sum after
 
   putStrLn $ "Accounts after " ++ show (nThreads * opsPerThread)
-          ++ " transfers: " ++ show after
+          ++ " transfer attempts: " ++ show after
   putStrLn $ "Sum after:  " ++ show sumAfter
-  if sumBefore == sumAfter
-    then putStrLn "CHECK: sum is unchanged -- OK"
-    else putStrLn $ "CHECK: FAILED (was " ++ show sumBefore
-                 ++ ", became " ++ show sumAfter ++ ")"
-  putStrLn $ "Balances: " ++ intercalate ", " (map show after)
+  if sumBefore == sumAfter && all (>= 0) after
+    then putStrLn "CHECK: sum unchanged, balances non-negative -- OK"
+    else do
+      putStrLn "CHECK: FAILED -- sum changed or a balance is negative"
+      exitFailure

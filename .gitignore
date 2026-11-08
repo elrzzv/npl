@@ -1,0 +1,24 @@
+# Локальные настройки редакторов и кеши Scala
+.vscode/
+.idea/
+.metals/
+.bloop/
+.bsp/
+target/
+
+# Результаты компиляции
+*.exe
+*.o
+*.hi
+*.dyn_o
+*.dyn_hi
+*.cmi
+*.cmo
+*.cmx
+
+# Локальные файлы сборки Haskell
+dist-newstyle/
+.ghc.environment.*
+
+# Изображение, создаваемое заданием Julia
+/1_task_3_julia/mandelbrot.ppm
