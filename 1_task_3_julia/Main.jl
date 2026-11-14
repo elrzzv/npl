@@ -6,6 +6,8 @@ const X_MAX =  1.0
 const Y_MIN = -1.25
 const Y_MAX =  1.25
 
+# z = z*z + c
+# c = cr + ci·i
 function mandel(cr::Float64, ci::Float64)::Int
     zr = 0.0
     zi = 0.0
@@ -70,8 +72,8 @@ function write_ppm(path::String, buf::Vector{UInt8}, w::Int, h::Int)
 end
 
 function main()
-    println("=== Мандельброт $(WIDTH)x$(HEIGHT), max iter = $MAX_ITER ===")
-    println("Потоков: $(Threads.nthreads())")
+    println("=== Mandelbrot $(WIDTH)x$(HEIGHT), max iterations = $MAX_ITER ===")
+    println("Threads: $(Threads.nthreads())")
 
     # Прогрев компиляции, чтобы время не включало JIT
     tiny = Vector{UInt8}(undef, 3 * 8 * 6)
@@ -81,19 +83,20 @@ function main()
     # 1 поток
     buf1 = Vector{UInt8}(undef, WIDTH * HEIGHT * 3)
     t1 = @elapsed render_serial!(buf1, WIDTH, HEIGHT)
-    println("1 поток:  $(round(t1, digits = 3)) s")
+    println("Serial:  $(round(t1, digits = 3)) s")
 
     # N потоков
     bufN = Vector{UInt8}(undef, WIDTH * HEIGHT * 3)
     tN = @elapsed render_threads!(bufN, WIDTH, HEIGHT)
-    println("$(Threads.nthreads()) потоков: $(round(tN, digits = 3)) s")
-    println("Ускорение: $(round(t1 / tN, digits = 2))x")
+    println("Parallel ($(Threads.nthreads()) threads): $(round(tN, digits = 3)) s")
+    println("Speedup: $(round(t1 / tN, digits = 2))x")
 
-    println("Буферы совпадают: $(buf1 == bufN ? "OK" : "FAIL")")
+    buf1 == bufN || error("Serial and parallel buffers differ")
+    println("Buffers match: $(buf1 == bufN ? "OK" : "FAIL")")
 
     out = joinpath(@__DIR__, "mandelbrot.ppm")
     write_ppm(out, bufN, WIDTH, HEIGHT)
-    println("Сохранено: $out ($(filesize(out)) байт)")
+    println("Saved: mandelbrot.ppm ($(filesize(out)) bytes)")
 end
 
 main()
