@@ -13,6 +13,11 @@ target/
 
 # Scala / Haskell build artifacts
 *.hi
+*.dyn_hi
+*.dyn_o
+*.cmi
+*.cmo
+*.cmx
 *.o
 *.exe
 dist-newstyle/
