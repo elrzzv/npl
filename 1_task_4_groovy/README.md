@@ -1,5 +1,10 @@
 # Задача 1.4 — параллельный обход дерева каталогов (Groovy)
 
+## Запись с демонстрацией
+https://drive.google.com/file/d/1RU7FCtYry_TVcDFkdbVXsvPSwdQ8vTzu/view?usp=drive_link
+
+## Постановка задачи
+
 Каталоги собираются в `ConcurrentLinkedQueue`. Рабочие потоки извлекают их
 из очереди и подсчитывают файлы по расширениям через `ConcurrentHashMap`
 и `AtomicLong`. Символические ссылки не обходятся.
