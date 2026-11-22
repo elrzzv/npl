@@ -1,5 +1,10 @@
 # Задача 1.2 — банковские переводы через STM (Haskell)
 
+## Запись с демонстрацией
+https://drive.google.com/file/d/1Hl5cZfAq6Z7ydzWUQ7Oi3OEJuixp1qdc/view?usp=drive_link
+
+## Постановка задачи
+
 8 счетов хранятся в `TVar Int`. Четыре потока выполняют по 20 000 попыток
 случайного перевода на сумму от 1 до 200. Каждый перевод — одна транзакция
 `atomically` с `readTVar`/`writeTVar`.
